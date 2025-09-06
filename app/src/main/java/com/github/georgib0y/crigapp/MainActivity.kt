@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,19 +47,19 @@ class MainActivity : ComponentActivity() {
                 uciViewModel.uciState.collect { uciState ->
                     setContent {
                         CrigTheme {
-                            UciScaffold(
-                                uciState,
-                                onNextMove =  {
-                                    uciViewModel.viewModelScope.launch {
-                                        uciViewModel.tryMove(it)
-                                    }
-                                },
-                                onReset = {
-                                    uciViewModel.viewModelScope.launch {
-                                        uciViewModel.newGame()
-                                    }
+                            UciScaffold(uciState, onNextMove = {
+                                uciViewModel.viewModelScope.launch {
+                                    uciViewModel.tryMove(it)
                                 }
-                            )
+                            }, onReset = {
+                                uciViewModel.viewModelScope.launch {
+                                    uciViewModel.newGame()
+                                }
+                            }, onLogPosition = {
+                                uciViewModel.viewModelScope.launch {
+                                    uciViewModel.logPosition()
+                                }
+                            })
                         }
                     }
                 }
@@ -66,29 +69,49 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun UciScaffold(uciState: UciState, onNextMove: (String) -> Unit, onReset: () -> Unit) {
+fun UciScaffold(
+    uciState: UciState,
+    onNextMove: (String) -> Unit,
+    onReset: () -> Unit,
+    onLogPosition: () -> Unit,
+) {
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
         topBar = { Text(text = "hello up here") },
-        bottomBar = { Text("hello down here") }
-    ) { innerPadding ->
-        Column(verticalArrangement = Arrangement.Bottom) {
+        bottomBar = { Text("hello down here") }) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .safeContentPadding()
+                .imePadding()
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.Bottom
+        ) {
             Moves(
-                moves = uciState.moves,
-                modifier = Modifier.padding(innerPadding).padding(10.dp)
+                moves = when (uciState.status) {
+                    is UciStatus.Thinking -> uciState.moves + uciState.status.moves
+                    else -> uciState.moves
+                }, modifier = Modifier
+                    .padding(innerPadding)
+                    .padding(10.dp)
+                    .imePadding()
+                    .fillMaxHeight(0.8f)
             )
             MoveInput(
                 status = uciState.status,
                 onNextMove = onNextMove,
             )
-            Button(onClick = onReset) { Text("Reset")}
+            Row {
+                Button(onClick = onReset) { Text("Reset") }
+                Button(onClick = onLogPosition) { Text("Log Position") }
+            }
         }
+
     }
 }
 
 @Composable
 fun Moves(moves: List<String>, modifier: Modifier = Modifier) {
-    LazyColumn (modifier = modifier.fillMaxHeight(0.7f)){
+    LazyColumn(modifier = modifier) {
         items(moves) { move -> Text(text = move) }
     }
 }
@@ -99,6 +122,7 @@ fun MoveInput(status: UciStatus, onNextMove: (String) -> Unit) {
 
     Row {
         TextField(
+            modifier = Modifier.fillMaxWidth(0.5f),
             value = text,
             onValueChange = { text = it },
             label = { Text("Next Move") },
@@ -108,15 +132,17 @@ fun MoveInput(status: UciStatus, onNextMove: (String) -> Unit) {
                     is UciStatus.Error -> Text(status.toString())
                     else -> {}
                 }
-            }
-        )
+            })
         when (status) {
-            is UciStatus.Waiting -> Button(onClick = {
-                onNextMove(text)
-                text = ""
-            }) { Text("Next Move")}
-            is UciStatus.Thinking -> Button(onClick = {}, enabled = false) { Text("Thinking")}
-            is UciStatus.Error -> Button(onClick = {}, enabled = false) { Text("Error")}
+            is UciStatus.Waiting -> Button(
+                onClick = {
+                    onNextMove(text)
+                    text = ""
+                }) { Text("Next Move") }
+
+            is UciStatus.Thinking -> Button(onClick = {}, enabled = false) { Text("Thinking") }
+            is UciStatus.Error -> Button(
+                onClick = {}) { Text(if (text.isEmpty()) "Error" else "Next Move") }
         }
     }
 }

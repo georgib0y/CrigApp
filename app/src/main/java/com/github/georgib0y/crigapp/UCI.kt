@@ -17,16 +17,18 @@ class UCI {
             System.loadLibrary("c")
             Log.d(TAG, "loaded lib c")
             System.loadLibrary("dl")
-            Log.d(TAG, "loaded lib dl")
+            System.loadLibrary("log")
+            Log.d(TAG, "loaded lib log")
             System.loadLibrary("crig")
             Log.d(TAG, "loaded lib crig")
         }
     }
 
 
-    external fun initUci(): Long
-    external fun uciNewGame(ptr: Long)
-    external fun sendPosition(ptr: Long, posStr: String): String
+    private external fun initUci(): Long
+    private external fun uciNewGame(ptr: Long)
+    private external fun sendPosition(ptr: Long, posStr: String): String
+    private external fun logUciPosition(ptr: Long, posStr: String)
 
     private val ptr = initUci();
 
@@ -40,4 +42,8 @@ class UCI {
         return sendPosition(ptr, position)
     }
 
+    fun logPos(position: String) {
+        Log.d(TAG, "asking zig to log uci state")
+        logUciPosition(ptr, position)
+    }
 }

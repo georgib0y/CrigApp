@@ -18,3 +18,7 @@ JNIEXPORT jlong JNICALL
 Java_com_github_georgib0y_crigapp_UCI_initUci(JNIEnv *env, jobject thiz) {
     return 0;
 }
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_github_georgib0y_crigapp_UCI_logUciPosition(JNIEnv *env, jobject thiz, jlong ptr,
+                                                     jstring pos_str) {}

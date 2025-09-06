@@ -29,8 +29,9 @@ add_library(${CMAKE_PROJECT_NAME} SHARED
         native-lib.cpp)
 
 add_library(libcrig SHARED IMPORTED)
-set_property(TARGET libcrig PROPERTY
-             IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/libs/libcrig.so")
+set_property(TARGET libcrig
+        PROPERTY IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/libs/${CMAKE_SYSTEM_PROCESSOR}/libcrig.so")
+
 
 #add_library(libc SHARED IMPORTED)
 #set_property(TARGET libc PROPERTY

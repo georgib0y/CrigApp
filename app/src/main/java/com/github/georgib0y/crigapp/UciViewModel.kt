@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 
 sealed class UciStatus {
     class Waiting() : UciStatus()
-    class Thinking() : UciStatus()
+    class Thinking(val moves: List<String>) : UciStatus()
     data class Error(val err: Throwable): UciStatus()
 }
 data class UciState(
@@ -34,28 +34,34 @@ class UciViewModel : ViewModel() {
         }
     }
 
-    suspend fun tryMove(move: String) = withContext(Dispatchers.Default) {
+    fun genPosStr(startpos: Boolean, moves: List<String>): String {
+        if (startpos) {
+            return "position startpos"
+        }
+        return "position startpos moves " + moves.joinToString(separator = " ")
+    }
+
+    suspend fun logPosition() = withContext(Dispatchers.Default) {
+        val isStartpos = uciState.value.moves.isEmpty()
+        uciState.value.uci.logPos(genPosStr(isStartpos, uciState.value.moves))
+    }
+
+    suspend fun tryMove(moveStr: String) = withContext(Dispatchers.Default) {
+        val theseMoves = moveStr.trim().lines()
         _uciState.update { curr ->
             UciState(
                 uci = curr.uci,
                 moves = curr.moves,
-                status = UciStatus.Thinking()
+                status = UciStatus.Thinking(theseMoves)
             )
         }
 
         _uciState.update { curr ->
-            val isStartpos = (move == "startpos" || move.isEmpty())
+            val isStartpos = theseMoves.size == 1 && (theseMoves.first() == "startpos" || theseMoves.first().isEmpty())
+            val nextMoves = curr.moves + theseMoves
+            val position = genPosStr(isStartpos, nextMoves)
 
-            val nextMoves = curr.moves + move
             try {
-                val position = if (isStartpos && curr.moves.isEmpty()) {
-                    "position startpos"
-                } else if (move.length < 4 || move.length > 5) {
-                    throw UciException("invalid move: $move")
-                } else {
-                    "position startpos moves " + nextMoves.joinToString(separator =  " ")
-                }
-
                 val bm = curr.uci.go(position)
 
                 return@update UciState(
