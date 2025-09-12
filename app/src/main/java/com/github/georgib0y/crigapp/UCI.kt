@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 private const val TAG = "UCI";
 
 class UciException(message: String) : Exception(message)
+class BadPositionException(val idx: Int) : Exception("bad position at move idx $idx")
 
 // ULong assumes 64bit
 class UCI {
@@ -27,7 +28,9 @@ class UCI {
 
     private external fun initUci(): Long
     private external fun uciNewGame(ptr: Long)
-    private external fun sendPosition(ptr: Long, posStr: String): String
+
+    private external fun validatePosition(posStr: String): Int
+    private external fun searchPosition(ptr: Long, posStr: String): String
     private external fun logUciPosition(ptr: Long, posStr: String)
 
     private val ptr = initUci();
@@ -37,9 +40,18 @@ class UCI {
         Log.d(TAG, "uci new gamed")
     }
 
-    fun go(position: String): String {
-        Log.d(TAG, "sending position: $position")
-        return sendPosition(ptr, position)
+    fun validate(position: String) {
+        Log.d(TAG, "validating position: '$position'")
+        val res = validatePosition(position)
+        if (res != -1) {
+            Log.e(TAG, "bad move at idx $res")
+            throw BadPositionException(res)
+        }
+    }
+
+    fun search(position: String): String {
+        Log.d(TAG, "searching position: $position")
+        return searchPosition(ptr, position)
     }
 
     fun logPos(position: String) {
